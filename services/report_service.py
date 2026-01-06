@@ -13,70 +13,195 @@ from schemas.evaluation import EvaluationReportSchema
 logger = logging.getLogger(__name__)
 
 # System prompt for English evaluation
-SYSTEM_PROMPT = """You are an expert English communication coach and evaluator. Your task is to analyze transcribed speech and provide a comprehensive evaluation of the speaker's English communication skills.
+SYSTEM_PROMPT = """
+You are a professional communication evaluation engine designed for enterprise employee assessment.
 
-Analyze the transcription for:
-1. Fluency - smoothness of speech, hesitations, filler words
-2. Grammar - correctness of sentence structures, tenses, agreements
-3. Pronunciation - clarity and accuracy (based on transcription patterns)
-4. Vocabulary - range, appropriateness, word choice
-5. Structure - logical organization, coherence, flow of ideas
+Your task is to evaluate transcribed spoken communication using a scientifically grounded, rubric-based framework.
+You must assess communication analytically, not impressionistically.
 
-Provide constructive, actionable feedback that helps the speaker improve.
+You MUST evaluate the transcription across the following dimensions, using observable linguistic and discourse features:
 
-CRITICAL: You must respond with ONLY valid JSON. No markdown formatting, no code blocks, no commentary before or after the JSON. The response must be parseable as raw JSON."""
+1. Clarity & Understandability
+   - Readability, sentence length, vocabulary simplicity, coherence
+   - Penalize long, complex sentences and unexplained jargon
+   - Reward simple, direct explanations and clear concept framing
 
-USER_PROMPT_TEMPLATE = """Analyze the following transcribed speech and provide a detailed evaluation:
+2. Tone & Style
+   - Sentiment, professionalism, respectfulness, confidence
+   - Penalize negative, dismissive, or judgmental language
+   - Reward positive, supportive, audience-aware tone
+
+3. Engagement & Interactivity
+   - Audience address, inclusive pronouns, questions, dialogic cues
+   - Penalize monologic delivery with no engagement markers
+   - Reward direct address (“you”, “we”), questions, invitations to think or respond
+
+4. Structure & Organization
+   - Presence of introduction, agenda, logical flow, transitions, summary
+   - Penalize topic jumping and lack of signposting
+   - Reward explicit structure (e.g., “first…”, “next…”, “in summary…”)
+
+5. Content Accuracy & Validity
+   - Internal consistency, factual correctness, relevance
+   - Penalize contradictions, vague or incorrect claims
+   - Reward verifiable, precise, and logically consistent statements
+
+6. Persuasion / Influence
+   - Logical argumentation, evidence usage, emotional resonance
+   - Penalize unsupported opinions and flat assertions
+   - Reward concrete examples, confident language, compelling reasoning
+
+7. Language Quality (Grammar & Fluency)
+   - Grammar accuracy, lexical diversity, fluency
+   - Penalize frequent grammatical errors and fragmented sentences
+   - Reward fluent, varied, and precise language
+
+8. Speech Patterns (Fillers, Pauses, Pacing)
+   - Filler words (“um”, “uh”), pacing regularity
+   - Penalize excessive fillers (>5%) or erratic pacing
+   - Reward smooth flow and steady, moderate pace
+
+SCORING RULES:
+- Each criterion must be scored from 0–100
+- Scores must align with these bands:
+  Poor: <40
+  Average: 40–59
+  Good: 60–79
+  Excellent: 80–100
+
+OVERALL SCORE:
+- Compute as the arithmetic average of all criteria scores
+- Round to the nearest integer
+
+CRITICAL OUTPUT RULES:
+- Respond with ONLY valid JSON
+- No markdown
+- No explanations outside JSON
+- No trailing comments
+"""
+
+USER_PROMPT_TEMPLATE = """
+Analyze the following transcribed speech using the defined communication evaluation framework.
 
 --- TRANSCRIPTION START ---
 {transcription}
 --- TRANSCRIPTION END ---
 
-Provide your evaluation as a JSON object with exactly this structure:
-{{
+Return your evaluation as a SINGLE JSON object using EXACTLY this structure:
+
+{
   "overall_score": <integer 0-100>,
-  "summary": "<brief overall assessment>",
-  "strengths": ["<strength 1>", "<strength 2>", ...],
-  "improvements": ["<area 1>", "<area 2>", ...],
-  "fluency": {{"score": <0-100>, "notes": "<detailed notes>"}},
-  "grammar": {{"score": <0-100>, "notes": "<detailed notes>"}},
-  "pronunciation": {{"score": <0-100>, "notes": "<detailed notes>"}},
-  "vocabulary": {{"score": <0-100>, "notes": "<detailed notes>"}},
-  "structure": {{"score": <0-100>, "notes": "<detailed notes>"}},
+  "overall_band": "<Poor | Average | Good | Excellent>",
+  "summary": "<concise analytical summary>",
+
+  "criteria": {
+    "clarity_understandability": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing readability, sentence length, clarity>"
+    },
+    "tone_style": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing sentiment and professionalism>"
+    },
+    "engagement_interactivity": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing questions, pronouns, audience address>"
+    },
+    "structure_organization": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing intro, transitions, summary>"
+    },
+    "content_accuracy_validity": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing factual correctness and consistency>"
+    },
+    "persuasion_influence": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing arguments, evidence, emotional appeal>"
+    },
+    "language_quality": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing grammar and vocabulary>"
+    },
+    "speech_patterns": {
+      "score": <0-100>,
+      "band": "<Poor | Average | Good | Excellent>",
+      "notes": "<analysis referencing fillers, pauses, pacing>"
+    }
+  },
+
+  "strengths": [
+    "<clear strength>",
+    "<clear strength>"
+  ],
+
+  "improvement_areas": [
+    "<specific improvement area>",
+    "<specific improvement area>"
+  ],
+
   "action_plan": [
-    {{"item": "<what to do>", "why": "<reason>", "how": "<method>"}},
-    ...
+    {
+      "focus": "<criterion name>",
+      "what_to_improve": "<specific issue>",
+      "why_it_matters": "<impact on communication>",
+      "how_to_improve": "<concrete, actionable step>"
+    }
   ]
-}}
+}
 
-Requirements:
-- overall_score: integer between 0 and 100
-- strengths: 1-10 items
-- improvements: 1-10 items
-- action_plan: 1-7 items
+STRICT REQUIREMENTS:
 - All scores must be integers between 0 and 100
+- Bands must strictly follow score ranges
+- Strengths: 2–6 items
+- Improvement areas: 2–6 items
+- Action plan: 2–5 items
+- Output ONLY the JSON object
+"""
 
-Return ONLY the JSON object, nothing else."""
+FIX_JSON_PROMPT = """
+The previous response was invalid JSON or did not match the required schema.
 
-FIX_JSON_PROMPT = """The previous response was not valid JSON. Please fix it and return ONLY valid JSON matching this exact structure:
+Return ONLY valid JSON matching EXACTLY this structure:
 
-{{
-  "overall_score": <integer 0-100>,
+{
+  "overall_score": <integer>,
+  "overall_band": "<Poor | Average | Good | Excellent>",
   "summary": "<string>",
-  "strengths": ["<string>", ...],
-  "improvements": ["<string>", ...],
-  "fluency": {{"score": <0-100>, "notes": "<string>"}},
-  "grammar": {{"score": <0-100>, "notes": "<string>"}},
-  "pronunciation": {{"score": <0-100>, "notes": "<string>"}},
-  "vocabulary": {{"score": <0-100>, "notes": "<string>"}},
-  "structure": {{"score": <0-100>, "notes": "<string>"}},
-  "action_plan": [{{"item": "<string>", "why": "<string>", "how": "<string>"}}]
-}}
+  "criteria": {
+    "clarity_understandability": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "tone_style": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "engagement_interactivity": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "structure_organization": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "content_accuracy_validity": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "persuasion_influence": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "language_quality": {"score": <integer>, "band": "<string>", "notes": "<string>"},
+    "speech_patterns": {"score": <integer>, "band": "<string>", "notes": "<string>"}
+  },
+  "strengths": ["<string>"],
+  "improvement_areas": ["<string>"],
+  "action_plan": [
+    {
+      "focus": "<string>",
+      "what_to_improve": "<string>",
+      "why_it_matters": "<string>",
+      "how_to_improve": "<string>"
+    }
+  ]
+}
 
-Previous invalid response:
+Previous response:
 {previous_response}
 
-Return ONLY valid JSON, no markdown, no code blocks, no explanation."""
+Return ONLY valid JSON. No markdown. No commentary.
+"""
 
 
 class ReportService:
