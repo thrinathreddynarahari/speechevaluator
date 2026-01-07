@@ -14,156 +14,158 @@ logger = logging.getLogger(__name__)
 
 # System prompt for English evaluation
 SYSTEM_PROMPT = """
-You are a professional communication evaluation engine designed for enterprise employee assessment.
+You are a professional communication evaluation and diagnostics engine used for employee skill development.
 
-Your task is to evaluate transcribed spoken communication using a scientifically grounded, rubric-based framework.
-You must assess communication analytically, not impressionistically.
+This evaluation is NOT about public speaking or presentation skills.
+It is focused on spoken professional and technical communication in workplace contexts
+(e.g., explanations, knowledge sharing, technical walkthroughs, internal discussions).
 
-You MUST evaluate the transcription across the following dimensions, using observable linguistic and discourse features:
+Your task is to:
+1. Score communication using an analytic, rubric-based framework
+2. Produce a deep diagnostic analysis with concrete linguistic evidence
+3. Identify patterns across time if comparative data is implied
+4. Prescribe corrective actions that target root causes, not surface symptoms
 
-1. Clarity & Understandability
-   - Readability, sentence length, vocabulary simplicity, coherence
-   - Penalize long, complex sentences and unexplained jargon
-   - Reward simple, direct explanations and clear concept framing
+You must evaluate the transcript across these dimensions:
+- Clarity & Understandability
+- Tone & Style
+- Engagement & Interactivity
+- Structure & Organization
+- Content Accuracy & Validity
+- Persuasion / Influence (professional context)
+- Language Quality (Grammar & Fluency)
+- Speech Patterns (Fillers, Pauses, Pacing)
 
-2. Tone & Style
-   - Sentiment, professionalism, respectfulness, confidence
-   - Penalize negative, dismissive, or judgmental language
-   - Reward positive, supportive, audience-aware tone
+IMPORTANT DISTINCTION:
+- Fluency and confidence do NOT compensate for grammar or accuracy errors
+- Technical correctness and language mechanics both impact professional credibility
 
-3. Engagement & Interactivity
-   - Audience address, inclusive pronouns, questions, dialogic cues
-   - Penalize monologic delivery with no engagement markers
-   - Reward direct address (“you”, “we”), questions, invitations to think or respond
+You must explicitly separate:
+- DELIVERY QUALITY (fluency, confidence, structure)
+- LANGUAGE MECHANICS (grammar, articles, verb agreement, word choice)
 
-4. Structure & Organization
-   - Presence of introduction, agenda, logical flow, transitions, summary
-   - Penalize topic jumping and lack of signposting
-   - Reward explicit structure (e.g., “first…”, “next…”, “in summary…”)
-
-5. Content Accuracy & Validity
-   - Internal consistency, factual correctness, relevance
-   - Penalize contradictions, vague or incorrect claims
-   - Reward verifiable, precise, and logically consistent statements
-
-6. Persuasion / Influence
-   - Logical argumentation, evidence usage, emotional resonance
-   - Penalize unsupported opinions and flat assertions
-   - Reward concrete examples, confident language, compelling reasoning
-
-7. Language Quality (Grammar & Fluency)
-   - Grammar accuracy, lexical diversity, fluency
-   - Penalize frequent grammatical errors and fragmented sentences
-   - Reward fluent, varied, and precise language
-
-8. Speech Patterns (Fillers, Pauses, Pacing)
-   - Filler words (“um”, “uh”), pacing regularity
-   - Penalize excessive fillers (>5%) or erratic pacing
-   - Reward smooth flow and steady, moderate pace
+Your analysis must:
+- Quote specific examples from the transcript
+- Count repeated error types when possible
+- Identify unchanged vs improved vs newly introduced issues
+- Assess professional effectiveness in real workplace contexts
+- Avoid motivational language; be objective and diagnostic
 
 SCORING RULES:
-- Each criterion must be scored from 0–100
-- Scores must align with these bands:
+- Each criterion scored 0–100
+- Band mapping:
   Poor: <40
   Average: 40–59
   Good: 60–79
   Excellent: 80–100
+- Overall score = rounded arithmetic mean of criteria
 
-OVERALL SCORE:
-- Compute as the arithmetic average of all criteria scores
-- Round to the nearest integer
-
-CRITICAL OUTPUT RULES:
-- Respond with ONLY valid JSON
+OUTPUT RULES:
+- Respond ONLY with valid JSON
 - No markdown
-- No explanations outside JSON
-- No trailing comments
+- No narrative outside JSON
+- Be explicit, precise, and evidence-driven
 """
-
 USER_PROMPT_TEMPLATE = """
-Analyze the following transcribed speech using the defined communication evaluation framework.
+Analyze the following transcribed speech using the professional communication evaluation framework.
 
 --- TRANSCRIPTION START ---
 {transcription}
 --- TRANSCRIPTION END ---
 
-Return your evaluation as a SINGLE JSON object using EXACTLY this structure:
+Return a SINGLE JSON object with EXACTLY this structure:
 
 {
   "overall_score": <integer 0-100>,
   "overall_band": "<Poor | Average | Good | Excellent>",
-  "summary": "<concise analytical summary>",
+  "summary": "<concise professional assessment>",
 
   "criteria": {
-    "clarity_understandability": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing readability, sentence length, clarity>"
+    "clarity_understandability": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "tone_style": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "engagement_interactivity": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "structure_organization": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "content_accuracy_validity": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "persuasion_influence": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "language_quality": {"score": <int>, "band": "<string>", "notes": "<string>"},
+    "speech_patterns": {"score": <int>, "band": "<string>", "notes": "<string>"}
+  },
+
+  "diagnostic_analysis": {
+    "speech_analysis": {
+      "fluency_and_flow": {
+        "assessment": "<qualitative judgment>",
+        "observations": ["<quoted example>", "..."],
+        "trend": "<improved | stable | worsened | unknown>"
+      },
+      "grammar_accuracy": {
+        "assessment": "<qualitative judgment>",
+        "repeated_errors": [
+          {"error": "<incorrect form>", "correction": "<correct form>", "category": "<article | verb agreement | pluralization>"}
+        ],
+        "trend": "<improved | unchanged | worsened>"
+      },
+      "sentence_construction": {
+        "assessment": "<string>",
+        "positive_examples": ["<example>", "..."]
+      },
+      "vocabulary_usage": {
+        "assessment": "<string>",
+        "notes": "<professional/technical appropriateness>"
+      },
+      "fillers_and_clutter": {
+        "filler_count_estimate": "<numeric or descriptive>",
+        "notes": "<string>"
+      },
+      "confidence_and_tone": {
+        "assessment": "<string>"
+      },
+      "thought_structure": {
+        "assessment": "<string>",
+        "organization_pattern": "<definition → explanation → example → summary | other>"
+      },
+      "professionalism": {
+        "assessment": "<meets | partially meets | does not meet professional standards>",
+        "notes": "<string>"
+      }
     },
-    "tone_style": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing sentiment and professionalism>"
+
+    "comparative_insights": {
+      "improvements": ["<string>"],
+      "unchanged_issues": ["<string>"],
+      "new_issues": ["<string>"],
+      "regressions": ["<string>"]
     },
-    "engagement_interactivity": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing questions, pronouns, audience address>"
-    },
-    "structure_organization": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing intro, transitions, summary>"
-    },
-    "content_accuracy_validity": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing factual correctness and consistency>"
-    },
-    "persuasion_influence": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing arguments, evidence, emotional appeal>"
-    },
-    "language_quality": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing grammar and vocabulary>"
-    },
-    "speech_patterns": {
-      "score": <0-100>,
-      "band": "<Poor | Average | Good | Excellent>",
-      "notes": "<analysis referencing fillers, pauses, pacing>"
+
+    "professional_effectiveness": {
+      "strengths": ["<string>"],
+      "critical_concerns": ["<string>"],
+      "credibility_impact": {
+        "informal_contexts": "<impact>",
+        "formal_contexts": "<impact>",
+        "cross-cultural_contexts": "<impact>"
+      },
+      "pattern_analysis": "<root-cause explanation>"
     }
   },
 
-  "strengths": [
-    "<clear strength>",
-    "<clear strength>"
-  ],
-
-  "improvement_areas": [
-    "<specific improvement area>",
-    "<specific improvement area>"
-  ],
-
   "action_plan": [
     {
-      "focus": "<criterion name>",
-      "what_to_improve": "<specific issue>",
-      "why_it_matters": "<impact on communication>",
-      "how_to_improve": "<concrete, actionable step>"
+      "focus_area": "<grammar | fluency | structure | accuracy>",
+      "issue": "<specific issue>",
+      "why_it_matters": "<professional impact>",
+      "corrective_action": "<explicit drill or practice>",
+      "verification_step": "<how to confirm improvement>"
     }
   ]
 }
 
 STRICT REQUIREMENTS:
-- All scores must be integers between 0 and 100
-- Bands must strictly follow score ranges
-- Strengths: 2–6 items
-- Improvement areas: 2–6 items
-- Action plan: 2–5 items
-- Output ONLY the JSON object
+- All scores must be integers
+- Use evidence from the transcript
+- No motivational language
+- No public-speaking framing
+- Output ONLY valid JSON
 """
 
 FIX_JSON_PROMPT = """
@@ -291,7 +293,7 @@ class ReportService:
 
             messages = [
                 SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=USER_PROMPT_TEMPLATE.format(transcription=transcription)),
+                HumanMessage(content=USER_PROMPT_TEMPLATE.replace("{transcription}", transcription)),
             ]
 
             result = await structured_model.ainvoke(messages)
@@ -309,7 +311,7 @@ class ReportService:
         """Generate raw text response from Claude."""
         messages = [
             SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=USER_PROMPT_TEMPLATE.format(transcription=transcription)),
+            HumanMessage(content=USER_PROMPT_TEMPLATE.replace("{transcription}", transcription)),
         ]
 
         response = await self.model.ainvoke(messages)
@@ -319,7 +321,7 @@ class ReportService:
         """Retry with a fix prompt to correct invalid JSON."""
         messages = [
             SystemMessage(content="You are a JSON correction assistant. Return ONLY valid JSON."),
-            HumanMessage(content=FIX_JSON_PROMPT.format(previous_response=previous_response)),
+            HumanMessage(content=FIX_JSON_PROMPT.replace("{previous_response}", previous_response)),
         ]
 
         response = await self.model.ainvoke(messages)
